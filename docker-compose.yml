@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  solun-check-dns:
+    image: ghcr.io/solun-pm/solun-check-dns:main
+    container_name: solun-check-dns
+    environment:
+      - MONGODB_URL=
+      - API_URL=
+      - API_KEY=
+      - SOLUN_ADMIN_PASSWORD=
+    restart: always
