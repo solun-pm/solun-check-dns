@@ -14,6 +14,10 @@ const dbName = 'solun';
 const user_collection = 'users';
 const user_domain_collection = 'user_domains';
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function sendMail(to, subject, html) {
   let transporter = nodemailer.createTransport({
     host: 'ms.solun.pm',
@@ -35,85 +39,154 @@ async function sendMail(to, subject, html) {
   console.log('Message sent: %s', info.messageId);
 }
 
+function logInColor(message, status) {
+  const color = status === 'Correct' ? '\x1b[32m' : '\x1b[31m';
+  console.log(color, message, '\x1b[0m');
+}
+
 async function verifyDNSRecords(db, domain, dnsRecords) {
   let allRecordsCorrect = true;
-  console.log(dnsRecords)
   for (let record of dnsRecords) {
-    console.log("### Record:", record.type, record.name, record.data, "###")
     switch (record.type) {
       case 'MX':
         try {
-          const mxRecords = await dnsPromises.resolveMx(domain.domain);
+          const mxRecords = await dnsPromises.resolveMx(record.name);
           console.log('Expected MX:', record.data);
           console.log('Actual MX:', mxRecords[0]?.exchange);
           if (!mxRecords || mxRecords[0].exchange != record.data) {
             allRecordsCorrect = false;
+            logInColor('MX Check: Wrong', 'Wrong');
+          } else {
+            logInColor('MX Check: Correct', 'Correct');
           }
         } catch (err) {
           allRecordsCorrect = false;
+          console.log('Error at querying MX Record');
         }
         break;
       case 'CNAME':
         try {
-          const cnameRecords = await dnsPromises.resolveCname(domain.domain);
+          const cnameRecords = await dnsPromises.resolveCname(record.name);
           console.log('Expected CNAME:', record.data);
           console.log('Actual CNAME:', cnameRecords[0]);
           if (!cnameRecords || cnameRecords[0] != record.data) {
             allRecordsCorrect = false;
+            logInColor('CNAME Check: Wrong', 'Wrong');
+          } else {
+            logInColor('CNAME Check: Correct', 'Correct');
           }
         }
         catch (err) {
           allRecordsCorrect = false;
+          console.log('Error at querying CNAME Record');
         }
         break;
       case 'TXT':
         try {
-          const subdomain = record.name ? record.name : domain.domain;
-          const txtRecords = await dnsPromises.resolveTxt(subdomain);
-          console.log('Expected TXT:', record.data);
-          for (let txtRecord of txtRecords.flat()) {
-            console.log('Actual TXT:', txtRecord);
-            if (txtRecord !== record.data) {
+          const txtRecords = await dnsPromises.resolveTxt(record.name);
+          if (record.name.includes('dkim')) { // Only apply this check for DKIM records
+            let combinedTxtRecord = txtRecords.flat().join(''); // Combine all parts
+            console.log('Expected TXT:', record.data);
+            console.log('Actual TXT:', combinedTxtRecord);
+            if (combinedTxtRecord !== record.data) {
               allRecordsCorrect = false;
+              logInColor('DKIM Check: Wrong', 'Wrong');
+            } else {
+              logInColor('DKIM Check: Correct', 'Correct');
+            }
+          } else { // For non-DKIM TXT records
+            let matchFound = false;
+            console.log('Expected TXT:', record.data);
+            for (let txtRecord of txtRecords.flat()) {
+              console.log('Actual TXT:', txtRecord);
+              if (txtRecord === record.data) {
+                matchFound = true;
+              }
+            }
+            if (!matchFound) {
+              allRecordsCorrect = false;
+              logInColor('TXT Check: Wrong', 'Wrong');
+            } else {
+              logInColor('TXT Check: Correct', 'Correct');
             }
           }
         }
         catch (err) {
           allRecordsCorrect = false;
+          console.log('Error at querying TXT records');
         }
-        break;             
+        break;                   
       case 'SRV':
         try {
-          const srvRecords = await dnsPromises.resolveSrv(domain.domain);
-          console.log('Expected SRV:', record.data);
+          const srvRecords = await dnsPromises.resolveSrv(record.name);
+          console.log('Expected SRV:', record.data.replace(' 443', ''));
           console.log('Actual SRV:', srvRecords[0]?.name);
-          if (!srvRecords || srvRecords[0].name != record.data) {
+          if (!srvRecords || srvRecords[0].name != record.data.replace(' 443', '')) {
             allRecordsCorrect = false;
+            logInColor('SRV Check: Wrong', 'Wrong');
+          } else {
+            logInColor('SRV Check: Correct', 'Correct');
           }
         }
         catch (err) {
           allRecordsCorrect = false;
+          console.log('Error at querying SRV Record');
         }
         break;
     }
   }
 
   if (allRecordsCorrect) {
-    const domains = db.collection(user_domain_collection);
-    await domains.updateOne({ domain: domain.domain }, { $set: { verification_status: 'active' } });
-  
-    const htmlContent = `
-      <div style="background-color: #4F46E5; color: #1D3F5E">
-        <h1>Hello ${user.username},</h1>
-        <p>Your domain ${domain.domain} is now active!</p>
-        <p>Thank you for using Solun!</p>
-      </div>
-    `;
-  
-    await sendMail(user.fqe, 'Your Domain is Active', htmlContent);
+    if(domain.verification_status === 'pending') {
+      const domains = db.collection(user_domain_collection);
+      await domains.updateOne({ domain: domain.domain }, { $set: { verification_status: 'active' } });
+      const user = await db.collection(user_collection).findOne({ user_id: domain.user_id });
+    
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        </head>
+        <body>
+            <div style="color: #334155; padding: 20px; font-family: Arial, sans-serif;">
+                <h1>Hello ${user.username},</h1>
+                <p style="font-size: 1.25rem; color: #1E3A8A;">Your domain ${domain.domain} is now active! <i class="fas fa-check-circle" style="color: #10B981;"></i></p>
+                <p style="font-size: 1rem; color: #1F2937;">Thank you for using Solun!</p>
+                <p style="font-size: 1rem; color: #64748B;">You can now create mailboxes and aliases for this domain in the Solun Dashboard. Enjoy!</p>
+                <p style="font-size: 1rem; color: #64748B;">If you need any assistance, please do not hesitate to reply to this email. We're here to help!</p>
+            </div>
+        </body>
+        </html>    
+      `;
+    
+      await sendMail(user.fqe, 'Your Domain is Active', htmlContent);
+    }
   } else {
     console.log("### DNS Records Incorrect for Domain:", domain.domain, "###")
     const domains = db.collection(user_domain_collection);
+    if(domain.verification_status === 'active') {
+          const user = await db.collection(user_collection).findOne({ user_id: domain.user_id });
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+            </head>
+            <body>
+                <div style="color: #334155; padding: 20px; font-family: Arial, sans-serif;">
+                    <h1>Hello ${user.username},</h1>
+                    <p style="font-size: 1.25rem; color: #1E3A8A;">Your domain ${domain.domain} no longer complies with the Solun DNS records! <i class="fas fa-exclamation-circle" style="color: #EF4444;"></i></p>
+                    <p style="font-size: 1rem; color: #1F2937;">We have paused it in your Solun account. To re-add it, please go to the dashboard and enter the DNS entries stored there.</p>
+                    <p style="font-size: 1rem; color: #64748B;">It will be removed automatically after a few days, along with all your mailboxes and data - but we will warn you again before that happens.</p>
+                    <p style="font-size: 1rem; color: #64748B;">If you need any assistance, please do not hesitate to reply to this email. We're here to help!</p>
+                </div>
+            </body>
+            </html>
+          `;
+
+          await sendMail(user.fqe, 'Your Domain is Inactive', htmlContent);
+    }
     await domains.updateOne({ domain: domain.domain }, { $set: { verification_status: 'pending' } });
   }
 }
@@ -127,9 +200,9 @@ async function run() {
 
     const cursor = domains.find({
       verification_status: {
-        $nin: ['inactive', 'active']
+        $in: ['pending', 'active']
       }
-    });
+    }).sort({ verification_status: -1 });    
 
     while (await cursor.hasNext()) {
       const domain = await cursor.next();
@@ -153,11 +226,20 @@ async function run() {
       .then(async json => {
         await verifyDNSRecords(db, domain, json);
       })      
-      .catch(err => console.log(err));      
+      .catch(err => console.log(err));    
+      
+      if (await cursor.hasNext()) {
+        console.log('----------------------------------------');
+        console.log('Waiting for next Domain...');
+        console.log('----------------------------------------');
+        await sleep(120000); // 2 minutes
+      }
     }
   } finally {
     console.log("### Script End @", new Date(), "###");
-    await client.close();
+    if (client) {
+      await client.close();
+    }
   }
 }
 
@@ -168,4 +250,4 @@ run().catch(console.dir);
 setInterval(async () => {
   console.log("### Script Restart @", new Date(), "###");
   await run().catch(console.dir);
-}, 60000); // 60000 milliseconds = 1 minute
+}, 15 * 60 * 1000); // 15 minutes
