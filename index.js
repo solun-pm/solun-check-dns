@@ -51,8 +51,8 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
       case 'MX':
         try {
           const mxRecords = await dnsPromises.resolveMx(record.name);
-          console.log('Expected MX:', record.data);
-          console.log('Actual MX:', mxRecords[0]?.exchange);
+          //console.log('Expected MX:', record.data);
+          //console.log('Actual MX:', mxRecords[0]?.exchange);
           if (!mxRecords || mxRecords[0].exchange != record.data) {
             allRecordsCorrect = false;
             logInColor('MX Check: Wrong', 'Wrong');
@@ -67,8 +67,8 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
       case 'CNAME':
         try {
           const cnameRecords = await dnsPromises.resolveCname(record.name);
-          console.log('Expected CNAME:', record.data);
-          console.log('Actual CNAME:', cnameRecords[0]);
+          //console.log('Expected CNAME:', record.data);
+          //console.log('Actual CNAME:', cnameRecords[0]);
           if (!cnameRecords || cnameRecords[0] != record.data) {
             allRecordsCorrect = false;
             logInColor('CNAME Check: Wrong', 'Wrong');
@@ -86,8 +86,8 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
           const txtRecords = await dnsPromises.resolveTxt(record.name);
           if (record.name.includes('dkim')) { // Only apply this check for DKIM records
             let combinedTxtRecord = txtRecords.flat().join(''); // Combine all parts
-            console.log('Expected TXT:', record.data);
-            console.log('Actual TXT:', combinedTxtRecord);
+            //console.log('Expected TXT:', record.data);
+            //console.log('Actual TXT:', combinedTxtRecord);
             if (combinedTxtRecord !== record.data) {
               allRecordsCorrect = false;
               logInColor('DKIM Check: Wrong', 'Wrong');
@@ -96,9 +96,9 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
             }
           } else { // For non-DKIM TXT records
             let matchFound = false;
-            console.log('Expected TXT:', record.data);
+            //console.log('Expected TXT:', record.data);
             for (let txtRecord of txtRecords.flat()) {
-              console.log('Actual TXT:', txtRecord);
+              //console.log('Actual TXT:', txtRecord);
               if (txtRecord === record.data) {
                 matchFound = true;
               }
@@ -119,8 +119,8 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
       case 'SRV':
         try {
           const srvRecords = await dnsPromises.resolveSrv(record.name);
-          console.log('Expected SRV:', record.data.replace(' 443', ''));
-          console.log('Actual SRV:', srvRecords[0]?.name);
+          //console.log('Expected SRV:', record.data.replace(' 443', ''));
+          //console.log('Actual SRV:', srvRecords[0]?.name);
           if (!srvRecords || srvRecords[0].name != record.data.replace(' 443', '')) {
             allRecordsCorrect = false;
             logInColor('SRV Check: Wrong', 'Wrong');
