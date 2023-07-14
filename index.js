@@ -216,7 +216,7 @@ async function run() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': process.env.API_KEY
+          'authorization': process.env.API_KEY
         },
         body: JSON.stringify({
           domain: domain.domain
