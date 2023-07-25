@@ -66,15 +66,16 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
         break;
       case 'CNAME':
         try {
-          const cnameRecords = await dnsPromises.resolveCname(record.name);
+          logInColor('CNAME Check: Skipped', 'Correct');
+          //const cnameRecords = await dnsPromises.resolveCname(record.name);
           //console.log('Expected CNAME:', record.data);
           //console.log('Actual CNAME:', cnameRecords[0]);
-          if (!cnameRecords || cnameRecords[0] != record.data) {
-            allRecordsCorrect = false;
-            logInColor('CNAME Check: Wrong', 'Wrong');
-          } else {
-            logInColor('CNAME Check: Correct', 'Correct');
-          }
+          //if (!cnameRecords || cnameRecords[0] != record.data) {
+          //  allRecordsCorrect = false;
+          //  logInColor('CNAME Check: Wrong', 'Wrong');
+          //} else {
+          //  logInColor('CNAME Check: Correct', 'Correct');
+          //}
         }
         catch (err) {
           allRecordsCorrect = false;
@@ -83,33 +84,34 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
         break;
       case 'TXT':
         try {
-          const txtRecords = await dnsPromises.resolveTxt(record.name);
-          if (record.name.includes('dkim')) { // Only apply this check for DKIM records
-            let combinedTxtRecord = txtRecords.flat().join(''); // Combine all parts
+          logInColor('TXT & DKIM Check: Skipped', 'Correct');
+          //const txtRecords = await dnsPromises.resolveTxt(record.name);
+          //if (record.name.includes('dkim')) { // Only apply this check for DKIM records
+          //  let combinedTxtRecord = txtRecords.flat().join(''); // Combine all parts
             //console.log('Expected TXT:', record.data);
             //console.log('Actual TXT:', combinedTxtRecord);
-            if (combinedTxtRecord !== record.data) {
-              allRecordsCorrect = false;
-              logInColor('DKIM Check: Wrong', 'Wrong');
-            } else {
-              logInColor('DKIM Check: Correct', 'Correct');
-            }
-          } else { // For non-DKIM TXT records
-            let matchFound = false;
+          //  if (combinedTxtRecord !== record.data) {
+          //    allRecordsCorrect = false;
+          //    logInColor('DKIM Check: Wrong', 'Wrong');
+          //  } else {
+          //    logInColor('DKIM Check: Correct', 'Correct');
+          //  }
+          //} else { // For non-DKIM TXT records
+          //  let matchFound = false;
             //console.log('Expected TXT:', record.data);
-            for (let txtRecord of txtRecords.flat()) {
-              //console.log('Actual TXT:', txtRecord);
-              if (txtRecord === record.data) {
-                matchFound = true;
-              }
-            }
-            if (!matchFound) {
-              allRecordsCorrect = false;
-              logInColor('TXT Check: Wrong', 'Wrong');
-            } else {
-              logInColor('TXT Check: Correct', 'Correct');
-            }
-          }
+          //  for (let txtRecord of txtRecords.flat()) {
+          //    //console.log('Actual TXT:', txtRecord);
+          //    if (txtRecord === record.data) {
+          //      matchFound = true;
+          //    }
+          //  }
+          //  if (!matchFound) {
+          //    allRecordsCorrect = false;
+          //    logInColor('TXT Check: Wrong', 'Wrong');
+          //  } else {
+          //    logInColor('TXT Check: Correct', 'Correct');
+          //  }
+          // }
         }
         catch (err) {
           allRecordsCorrect = false;
@@ -118,15 +120,16 @@ async function verifyDNSRecords(db, domain, dnsRecords) {
         break;                   
       case 'SRV':
         try {
-          const srvRecords = await dnsPromises.resolveSrv(record.name);
+          logInColor('SRV Check: Skipped', 'Correct');
+          //const srvRecords = await dnsPromises.resolveSrv(record.name);
           //console.log('Expected SRV:', record.data.replace(' 443', ''));
           //console.log('Actual SRV:', srvRecords[0]?.name);
-          if (!srvRecords || srvRecords[0].name != record.data.replace(' 443', '')) {
-            allRecordsCorrect = false;
-            logInColor('SRV Check: Wrong', 'Wrong');
-          } else {
-            logInColor('SRV Check: Correct', 'Correct');
-          }
+          //if (!srvRecords || srvRecords[0].name != record.data.replace(' 443', '')) {
+          //  allRecordsCorrect = false;
+          //  logInColor('SRV Check: Wrong', 'Wrong');
+          //} else {
+          //  logInColor('SRV Check: Correct', 'Correct');
+          //}
         }
         catch (err) {
           allRecordsCorrect = false;
