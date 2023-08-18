@@ -10,7 +10,7 @@ const nodemailer = require('nodemailer');
 const url = process.env.MONGODB_URL;
 const client = new MongoClient(url);
 
-const dbName = 'solun';
+const dbName = 'solun_proj';
 const user_collection = 'users';
 const user_domain_collection = 'user_domains';
 
